@@ -107,7 +107,7 @@ export default function Home() {
                 voor jouw startup
               </h1>
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                Vergelijk 500+ funding opties in seconden. Van subsidies tot venture capital - wij matchen je met de juiste investeerders.
+                Vergelijk 136 Nederlandse funding opties in seconden. Van Crowdfunding tot Venture Capital - wij matchen je met de juiste investeerders.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 mb-12">

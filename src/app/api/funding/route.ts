@@ -15,7 +15,7 @@ interface FundingOpportunity {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const type = searchParams.get('type')
+    const category = searchParams.get('category') // Crowdfunding vs Venture Capital
     const sector = searchParams.get('sector')
     const stage = searchParams.get('stage')
 
@@ -28,14 +28,14 @@ export async function GET(request: NextRequest) {
     let query = 'SELECT * FROM funding_opportunities WHERE 1=1'
     const params: any[] = []
 
-    if (type && type !== 'all') {
-      query += ' AND stage = ?'
-      params.push(type)
+    if (category && category !== 'all') {
+      query += ' AND fund_name LIKE ?'
+      params.push(`%${category}%`)
     }
 
     if (sector && sector !== 'all') {
-      query += ' AND sector = ?'
-      params.push(sector)
+      query += ' AND sector LIKE ?'
+      params.push(`%${sector}%`)
     }
 
     if (stage && stage !== 'all') {
@@ -48,16 +48,22 @@ export async function GET(request: NextRequest) {
     const opportunities = db.prepare(query).all(...params)
 
     // Format data voor frontend
-    const formatted = opportunities.map((opp: any) => ({
-      id: opp.id,
-      name: `${opp.startup_name} → ${opp.fund_name}`,
-      type: opp.stage,
-      amount: `€${Math.round(opp.amount_eur).toLocaleString()}`,
-      stage: opp.stage,
-      description: `${opp.sector} startup uit ${opp.year}`,
-      sector: opp.sector,
-      year: opp.year,
-    }))
+    const formatted = opportunities.map((opp: any) => {
+      const isCrowdfunding = opp.fund_name && opp.fund_name.includes('Crowdfunding')
+      const category = isCrowdfunding ? 'Crowdfunding' : 'Venture Capital'
+      
+      return {
+        id: opp.id,
+        name: opp.startup_name,
+        fundName: opp.fund_name,
+        type: category,
+        amount: `€${Math.round(opp.amount_eur).toLocaleString()}`,
+        stage: opp.stage,
+        description: `${opp.sector} - ${category}`,
+        sector: opp.sector,
+        year: opp.year,
+      }
+    })
 
     return NextResponse.json({
       success: true,

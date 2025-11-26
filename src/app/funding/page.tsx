@@ -6,41 +6,41 @@ import { useState, useEffect } from 'react'
 interface FundingOpportunity {
   id: number
   name: string
+  fundName: string
   type: string
-  amount_min: number
-  amount_max: number
-  industry: string
+  amount: string
   stage: string
   description: string
+  sector: string
+  year: number
 }
 
 export default function FundingPage() {
   const [opportunities, setOpportunities] = useState<FundingOpportunity[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedType, setSelectedType] = useState('all')
-  const [selectedIndustry, setSelectedIndustry] = useState('all')
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedSector, setSelectedSector] = useState('all')
 
   useEffect(() => {
     fetchOpportunities()
-  }, [])
+  }, [selectedCategory, selectedSector])
 
   const fetchOpportunities = async () => {
+    setLoading(true)
     try {
-      const response = await fetch('/api/funding')
-      const data = await response.json()
-      setOpportunities(data)
+      let url = '/api/funding?'
+      if (selectedCategory !== 'all') url += `category=${selectedCategory}&`
+      if (selectedSector !== 'all') url += `sector=${selectedSector}&`
+      
+      const response = await fetch(url)
+      const result = await response.json()
+      setOpportunities(result.data || [])
     } catch (error) {
       console.error('Error fetching opportunities:', error)
     } finally {
       setLoading(false)
     }
   }
-
-  const filteredOpportunities = opportunities.filter(opp => {
-    if (selectedType !== 'all' && opp.type !== selectedType) return false
-    if (selectedIndustry !== 'all' && opp.industry !== selectedIndustry) return false
-    return true
-  })
 
   return (
     <div className="min-h-screen bg-white">
@@ -81,41 +81,40 @@ export default function FundingPage() {
           <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-12">
             <div className="grid md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Type Funding</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Categorie</label>
                 <select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
                   className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-600 focus:outline-none transition"
                 >
-                  <option value="all">Alle types</option>
+                  <option value="all">Alle categorieën</option>
                   <option value="Venture Capital">Venture Capital</option>
-                  <option value="Angel Investment">Angel Investment</option>
-                  <option value="Grant">Subsidies</option>
-                  <option value="Accelerator">Accelerators</option>
-                  <option value="Loan">Leningen</option>
+                  <option value="Crowdfunding">Crowdfunding</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Sector</label>
                 <select
-                  value={selectedIndustry}
-                  onChange={(e) => setSelectedIndustry(e.target.value)}
+                  value={selectedSector}
+                  onChange={(e) => setSelectedSector(e.target.value)}
                   className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-600 focus:outline-none transition"
                 >
                   <option value="all">Alle sectoren</option>
-                  <option value="fintech">Fintech</option>
-                  <option value="healthtech">Healthtech</option>
-                  <option value="edtech">Edtech</option>
-                  <option value="cleantech">Cleantech</option>
+                  <option value="Technology">Technology</option>
+                  <option value="FinTech">FinTech</option>
+                  <option value="HealthTech">HealthTech</option>
+                  <option value="EdTech">EdTech</option>
+                  <option value="CleanTech">CleanTech</option>
+                  <option value="Algemeen">Algemeen</option>
                 </select>
               </div>
 
               <div className="flex items-end">
                 <button
                   onClick={() => {
-                    setSelectedType('all')
-                    setSelectedIndustry('all')
+                    setSelectedCategory('all')
+                    setSelectedSector('all')
                   }}
                   className="w-full border-2 border-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:border-gray-300 hover:bg-gray-50 transition"
                 >
@@ -143,7 +142,7 @@ export default function FundingPage() {
             <>
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-bold text-gray-900">
-                  {filteredOpportunities.length} funding opties gevonden
+                  {opportunities.length} funding opties gevonden
                 </h2>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -152,7 +151,7 @@ export default function FundingPage() {
               </div>
 
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredOpportunities.map((opp) => (
+                {opportunities.map((opp: FundingOpportunity) => (
                   <div
                     key={opp.id}
                     className="group relative bg-white rounded-2xl border-2 border-gray-200 hover:border-indigo-300 p-6 hover:shadow-xl transition-all duration-300"
@@ -165,19 +164,18 @@ export default function FundingPage() {
 
                     <div className="mb-4">
                       <h3 className="text-xl font-bold text-gray-900 mb-2 pr-20">{opp.name}</h3>
-                      <p className="text-sm text-gray-600 line-clamp-2">{opp.description}</p>
+                      <p className="text-sm text-gray-600">{opp.fundName}</p>
+                      <p className="text-xs text-gray-500 mt-1">{opp.description}</p>
                     </div>
 
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center gap-2 text-sm">
                         <span className="text-gray-500">💰</span>
-                        <span className="font-semibold text-gray-900">
-                          €{opp.amount_min.toLocaleString()} - €{opp.amount_max.toLocaleString()}
-                        </span>
+                        <span className="font-semibold text-gray-900">{opp.amount}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <span className="text-gray-500">🏢</span>
-                        <span className="text-gray-600 capitalize">{opp.industry}</span>
+                        <span className="text-gray-600 capitalize">{opp.sector}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <span className="text-gray-500">📈</span>
@@ -192,15 +190,15 @@ export default function FundingPage() {
                 ))}
               </div>
 
-              {filteredOpportunities.length === 0 && (
+              {opportunities.length === 0 && !loading && (
                 <div className="text-center py-20 bg-gray-50 rounded-2xl">
                   <div className="text-6xl mb-4">🔍</div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">Geen resultaten gevonden</h3>
                   <p className="text-gray-600 mb-6">Probeer je filters aan te passen</p>
                   <button
                     onClick={() => {
-                      setSelectedType('all')
-                      setSelectedIndustry('all')
+                      setSelectedCategory('all')
+                      setSelectedSector('all')
                     }}
                     className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition transform"
                   >

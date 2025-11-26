@@ -20,45 +20,61 @@ export async function POST(request: NextRequest) {
 
     // Map industry naar sectors in database
     const industryMapping: { [key: string]: string[] } = {
-      'fintech': ['Fintech', 'SaaS', 'AI'],
-      'healthtech': ['Health', 'Deeptech', 'AI'],
-      'edtech': ['SaaS', 'AI', 'E-commerce'],
-      'iot': ['Deeptech', 'AI', 'Mobility'],
-      'cleantech': ['Climate', 'AgriTech', 'Deeptech'],
-      'other': ['SaaS', 'E-commerce', 'Deeptech']
+      'fintech': ['Technology', 'FinTech', 'Algemeen'],
+      'healthtech': ['Technology', 'HealthTech', 'Algemeen'],
+      'edtech': ['Technology', 'EdTech', 'Algemeen'],
+      'iot': ['Technology', 'IoT', 'Tech', 'Algemeen'],
+      'cleantech': ['Technology', 'CleanTech', 'Duurzaamheid', 'Algemeen'],
+      'other': ['Technology', 'Tech', 'Algemeen', 'Innovatie']
     }
 
-    const relevantSectors = industryMapping[industry.toLowerCase()] || ['SaaS', 'AI']
+    const relevantSectors = industryMapping[industry.toLowerCase()] || ['Technology', 'Algemeen']
 
     // Bereken match scores
     const recommendations = allOpportunities.map((opp: any) => {
       let score = 0
       
       // Sector match (40 punten)
-      if (relevantSectors.includes(opp.sector)) {
+      const sectorMatch = relevantSectors.some(sector => 
+        opp.sector && opp.sector.toLowerCase().includes(sector.toLowerCase())
+      )
+      if (sectorMatch) {
         score += 40
       }
       
-      // Funding amount match (35 punten)
+      // Funding type match (20 punten) - Venture Capital vs Crowdfunding
       const userFunding = Number(fundingAmount) || 250000
+      const fundType = opp.fund_name || ''
+      
+      if (userFunding > 1000000 && fundType.includes('Venture Capital')) {
+        score += 20
+      } else if (userFunding <= 500000 && fundType.includes('Crowdfunding')) {
+        score += 20
+      } else if (fundType.includes('Venture Capital') || fundType.includes('Crowdfunding')) {
+        score += 10
+      }
+      
+      // Funding amount match (25 punten)
       const oppAmount = opp.amount_eur
       const amountRatio = Math.min(userFunding, oppAmount) / Math.max(userFunding, oppAmount)
-      score += amountRatio * 35
+      score += amountRatio * 25
       
-      // Stage match (25 punten)
+      // Stage match (15 punten)
       const userRevenue = Number(revenue) || 0
       let userStage = 'Seed'
-      if (userRevenue > 1000000) userStage = 'Series B'
-      else if (userRevenue > 500000) userStage = 'Series A'
-      else if (userRevenue > 100000) userStage = 'Growth'
+      if (userRevenue > 2000000) userStage = 'Growth'
+      else if (userRevenue > 1000000) userStage = 'Series A'
+      else if (userRevenue > 100000) userStage = 'Seed'
+      else userStage = 'Pre-Seed'
       
       if (opp.stage === userStage) {
-        score += 25
+        score += 15
       } else if (
         (opp.stage === 'Series A' && userStage === 'Seed') ||
-        (opp.stage === 'Growth' && userStage === 'Series A')
+        (opp.stage === 'Growth' && userStage === 'Series A') ||
+        (opp.stage === 'Seed' && userStage === 'Pre-Seed')
       ) {
-        score += 15 // Volgende stage ook relevant
+        score += 10 // Volgende stage ook relevant
       }
 
       return {
